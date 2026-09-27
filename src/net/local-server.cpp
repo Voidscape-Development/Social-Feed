@@ -204,7 +204,7 @@ void LocalServer::handleConnection(QTcpSocket *socket)
 		if (socket->property("handled").toBool())
 			return;
 		QByteArray buffer = socket->property("buffer").toByteArray() + socket->readAll();
-		int end = buffer.indexOf("\r\n\r\n");
+		qsizetype end = buffer.indexOf("\r\n\r\n");
 		if (end < 0) {
 			if (buffer.size() > kMaxRequestHeader)
 				writeResponse(socket, 400, "text/plain", "Bad Request");
@@ -222,7 +222,7 @@ void LocalServer::handleConnection(QTcpSocket *socket)
 		}
 		QHash<QByteArray, QByteArray> headers;
 		for (int i = 1; i < lines.size(); i++) {
-			int colon = lines[i].indexOf(':');
+			qsizetype colon = lines[i].indexOf(':');
 			if (colon > 0)
 				headers.insert(lines[i].left(colon).trimmed().toLower(),
 					       lines[i].mid(colon + 1).trimmed());

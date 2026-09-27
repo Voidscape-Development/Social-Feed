@@ -21,8 +21,8 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "core/event-bus.hpp"
 #include "core/feed-types.hpp"
 
-#include <plugin-support.h>
 #include <obs-module.h>
+#include <plugin-support.h>
 
 #include <QJsonArray>
 #include <QRandomGenerator>
@@ -89,12 +89,12 @@ QJsonArray buildFragments(const QString &text, const QString &emotesTag)
 	std::sort(ranges.begin(), ranges.end(), [](const Range &a, const Range &b) { return a.start < b.start; });
 
 	QList<uint> cps = text.toUcs4();
-	auto slice = [&](int from, int to) {
+	auto slice = [&](qsizetype from, qsizetype to) {
 		return QString::fromUcs4(reinterpret_cast<const char32_t *>(cps.constData()) + from, to - from);
 	};
 
 	QJsonArray fragments;
-	int cursor = 0;
+	qsizetype cursor = 0;
 	for (const Range &r : ranges) {
 		if (r.start < cursor || r.end >= cps.size())
 			continue;
@@ -117,14 +117,14 @@ IrcMessage parseIrcLine(const QString &rawLine)
 {
 	IrcMessage msg;
 	QString line = rawLine;
-	int pos = 0;
+	qsizetype pos = 0;
 
 	if (line.startsWith('@')) {
-		int space = line.indexOf(' ');
+		qsizetype space = line.indexOf(' ');
 		if (space < 0)
 			return msg;
 		for (const QString &pair : line.mid(1, space - 1).split(';')) {
-			int eq = pair.indexOf('=');
+			qsizetype eq = pair.indexOf('=');
 			if (eq < 0)
 				msg.tags.insert(pair, QString());
 			else
@@ -134,14 +134,14 @@ IrcMessage parseIrcLine(const QString &rawLine)
 	}
 
 	if (pos < line.size() && line[pos] == ':') {
-		int space = line.indexOf(' ', pos);
+		qsizetype space = line.indexOf(' ', pos);
 		if (space < 0)
 			return msg;
 		msg.prefix = line.mid(pos + 1, space - pos - 1);
 		pos = space + 1;
 	}
 
-	int trailingStart = line.indexOf(" :", pos);
+	qsizetype trailingStart = line.indexOf(" :", pos);
 	QString middle = trailingStart >= 0 ? line.mid(pos, trailingStart - pos) : line.mid(pos);
 	QStringList parts = middle.split(' ', Qt::SkipEmptyParts);
 	if (!parts.isEmpty())

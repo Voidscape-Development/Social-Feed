@@ -49,10 +49,10 @@ bool TwitchCache::loadBadgeSet(const Credentials &creds, const QString &key, con
 		return false;
 
 	QHash<QString, Badge> loaded;
-	for (const auto &setValue : response.json().value("data").toArray()) {
+	for (const QJsonValue setValue : response.json().value("data").toArray()) {
 		QJsonObject set = setValue.toObject();
 		QString setId = set.value("set_id").toString();
-		for (const auto &versionValue : set.value("versions").toArray()) {
+		for (const QJsonValue versionValue : set.value("versions").toArray()) {
 			QJsonObject version = versionValue.toObject();
 			loaded.insert(setId + "/" + version.value("id").toString(),
 				      Badge{version.value("image_url_2x").toString(),

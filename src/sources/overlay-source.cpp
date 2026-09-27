@@ -167,7 +167,7 @@ void OverlaySource::update(obs_data_t *settings)
 
 	/* Explicit channels make the providers join them; "" (own channel) is implied. */
 	QList<ChannelRef> refs;
-	for (const auto &value : newChannels) {
+	for (const QJsonValue value : newChannels) {
 		QJsonObject c = value.toObject();
 		QString channel = c.value("channel").toString().trimmed().toLower();
 		if (!channel.isEmpty())
@@ -201,7 +201,7 @@ bool OverlaySource::accepts(const FeedItem &item)
 		return true;
 
 	std::lock_guard lock(mutex);
-	for (const auto &value : channels) {
+	for (const QJsonValue value : channels) {
 		QJsonObject ref = value.toObject();
 		if (ref.value("platform").toString() != item.platform)
 			continue;
@@ -279,7 +279,7 @@ QJsonObject OverlaySource::buildConfig()
 			type["mediaUrl"] = server.registerMedia(type.value("media").toString());
 			type["soundUrl"] = server.registerMedia(type.value("sound").toString());
 			QJsonArray variants;
-			for (const auto &v : type.value("variants").toArray()) {
+			for (const QJsonValue v : type.value("variants").toArray()) {
 				QJsonObject variant = v.toObject();
 				variant["mediaUrl"] = server.registerMedia(variant.value("media").toString());
 				variant["soundUrl"] = server.registerMedia(variant.value("sound").toString());

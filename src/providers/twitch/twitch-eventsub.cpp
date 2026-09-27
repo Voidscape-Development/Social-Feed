@@ -21,8 +21,8 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "core/event-bus.hpp"
 #include "core/feed-types.hpp"
 
-#include <plugin-support.h>
 #include <obs-module.h>
+#include <plugin-support.h>
 
 #include <QJsonArray>
 #include <QJsonDocument>

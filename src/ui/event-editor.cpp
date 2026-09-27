@@ -94,7 +94,7 @@ QWidget *buildVariantsEditor(DesignModel *model, const QString &path)
 	auto reload = [=]() {
 		QSignalBlocker block(table);
 		QJsonArray variants = model->value(path).toArray();
-		table->setRowCount(variants.size());
+		table->setRowCount((int)variants.size());
 		for (int row = 0; row < variants.size(); row++) {
 			QJsonObject v = variants[row].toObject();
 			for (int col = 0; col < ColCount; col++) {

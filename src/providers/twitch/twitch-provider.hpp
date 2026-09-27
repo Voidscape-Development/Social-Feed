@@ -74,7 +74,6 @@ private:
 	std::condition_variable cv;
 	bool stopping = false;
 	bool configDirty = true;
-	bool forceReconnect = false;
 	QStringList requestedChannels;
 	QStringList pendingRooms;
 

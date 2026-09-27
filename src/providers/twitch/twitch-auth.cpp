@@ -42,7 +42,7 @@ QString clientId()
 static QStringList toStringList(const QJsonValue &value)
 {
 	QStringList out;
-	for (const auto &v : value.toArray())
+	for (const QJsonValue v : value.toArray())
 		out.append(v.toString());
 	return out;
 }

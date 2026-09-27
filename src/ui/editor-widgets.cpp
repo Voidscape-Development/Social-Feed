@@ -290,7 +290,7 @@ QWidget *bindList(QFormLayout *form, DesignModel *model, const QString &label, c
 	onReload(model, edit, [=]() {
 		QSignalBlocker block(edit);
 		QStringList items;
-		for (const auto &v : model->value(path).toArray())
+		for (const QJsonValue v : model->value(path).toArray())
 			items.append(v.toString());
 		edit->setText(items.join(", "));
 	});

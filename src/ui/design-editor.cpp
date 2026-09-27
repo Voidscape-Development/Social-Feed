@@ -204,7 +204,7 @@ QJsonArray ChannelsEditor::channels() const
 void ChannelsEditor::setChannels(const QJsonArray &channels)
 {
 	table->setRowCount(0);
-	for (const auto &value : channels) {
+	for (const QJsonValue value : channels) {
 		QJsonObject c = value.toObject();
 		addRow(c.value("platform").toString(), c.value("channel").toString());
 	}

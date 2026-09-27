@@ -22,8 +22,8 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "core/feed-types.hpp"
 #include "providers/twitch/twitch-auth.hpp"
 
-#include <plugin-support.h>
 #include <obs-module.h>
+#include <plugin-support.h>
 
 #include <algorithm>
 #include <chrono>
