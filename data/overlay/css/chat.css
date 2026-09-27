@@ -1,0 +1,151 @@
+/* Social Feed: Chat Feed base styles. Values come from CSS variables set by chat.js from the
+ * design; the user's Custom CSS is appended after this file. */
+
+html, body {
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	background: transparent;
+}
+
+body {
+	font-family: var(--sf-font);
+	font-size: var(--sf-size);
+	font-weight: var(--sf-weight);
+	line-height: var(--sf-line-height);
+	color: var(--sf-color);
+	-webkit-font-smoothing: antialiased;
+}
+
+#feed {
+	position: absolute;
+	inset: 0;
+	box-sizing: border-box;
+	padding: var(--sf-padding);
+	display: flex;
+	flex-direction: column;
+	gap: var(--sf-gap);
+	overflow: hidden;
+}
+
+.sf-newest-bottom #feed { justify-content: flex-end; }
+.sf-newest-top #feed { justify-content: flex-start; }
+
+.sf-message {
+	display: flex;
+	flex: 0 0 auto;
+	max-width: 100%;
+}
+.sf-align-left .sf-message { justify-content: flex-start; }
+.sf-align-center .sf-message { justify-content: center; text-align: center; }
+.sf-align-right .sf-message { justify-content: flex-end; text-align: right; }
+
+.sf-bubble {
+	box-sizing: border-box;
+	max-width: var(--sf-bubble-max-width);
+	overflow-wrap: anywhere;
+	text-shadow: var(--sf-text-shadow);
+	-webkit-text-stroke: var(--sf-outline-width) var(--sf-outline-color);
+	paint-order: stroke fill;
+}
+
+.sf-bubbles .sf-bubble {
+	background: var(--sf-bubble-bg);
+	border-radius: var(--sf-bubble-radius);
+	padding: var(--sf-bubble-padding);
+	border: var(--sf-bubble-border-width) solid var(--sf-bubble-border-color);
+}
+
+.sf-accent .sf-bubble { border-left: var(--sf-accent-width) solid var(--sf-accent-color, transparent); }
+.sf-accent:not(.sf-bubbles) .sf-bubble { padding-left: calc(var(--sf-accent-width) + 6px); }
+
+.sf-meta { white-space: nowrap; }
+.sf-inline .sf-meta, .sf-inline .sf-text { display: inline; }
+.sf-inline .sf-meta { margin-right: 0.35em; }
+.sf-stacked .sf-meta { display: flex; align-items: center; gap: 0.3em; margin-bottom: 0.15em; }
+.sf-stacked .sf-text { display: block; }
+
+.sf-meta > * { vertical-align: middle; }
+.sf-inline .sf-meta > * + * { margin-left: 0.25em; }
+
+.sf-name {
+	font-weight: var(--sf-name-weight);
+}
+
+.sf-time { opacity: 0.6; font-size: 0.8em; }
+
+.sf-avatar {
+	width: 1.4em;
+	height: 1.4em;
+	border-radius: 50%;
+	object-fit: cover;
+}
+
+.sf-badges { display: inline-flex; gap: 0.15em; }
+.sf-badge { height: 1.1em; width: auto; vertical-align: middle; }
+
+.sf-platform-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.15em;
+	height: 1.15em;
+	border-radius: 0.3em;
+	font-size: 0.75em;
+	font-weight: 800;
+	color: #fff;
+	text-shadow: none;
+	-webkit-text-stroke: 0;
+}
+
+.sf-pronouns {
+	font-size: 0.7em;
+	padding: 0.05em 0.35em;
+	border-radius: 0.4em;
+	background: rgba(255, 255, 255, 0.15);
+}
+
+.sf-emote {
+	height: var(--sf-emote-size);
+	width: auto;
+	vertical-align: middle;
+	margin: -0.2em 0;
+}
+.sf-emote-stack { position: relative; display: inline-block; }
+.sf-emote-stack .sf-emote-zw { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+
+.sf-action .sf-text { font-style: italic; color: var(--sf-user-color, inherit); }
+
+.sf-reply {
+	display: block;
+	font-size: 0.75em;
+	opacity: 0.7;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.sf-link { text-decoration: underline; }
+.sf-deleted { display: none; }
+
+/* Highlights: stripe + tinted background, colors set per class by chat.js */
+.sf-highlighted .sf-bubble {
+	box-shadow: inset 0 0 0 2px var(--sf-highlight-color);
+}
+.sf-bubbles.sf-highlighted .sf-bubble,
+.sf-highlighted .sf-bubble {
+	background-image: linear-gradient(90deg, var(--sf-highlight-tint), transparent);
+}
+.sf-first-time-label {
+	font-size: 0.65em;
+	font-weight: 700;
+	padding: 0.05em 0.4em;
+	border-radius: 0.4em;
+	background: var(--sf-highlight-color);
+	color: #111;
+	text-shadow: none;
+	-webkit-text-stroke: 0;
+}
+.sf-stacked .sf-suffix { display: none; }

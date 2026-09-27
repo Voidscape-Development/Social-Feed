@@ -1,0 +1,47 @@
+/* Social Feed: shared enter/exit animations. Names match the editor's animation lists:
+ * sf-in-<name> and sf-out-<name>. Applied by SF.animate() with the configured duration/easing. */
+
+@keyframes sf-in-none { from { opacity: 1; } to { opacity: 1; } }
+@keyframes sf-in-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sf-in-slide-left { from { opacity: 0; transform: translateX(-110%); } to { opacity: 1; transform: none; } }
+@keyframes sf-in-slide-right { from { opacity: 0; transform: translateX(110%); } to { opacity: 1; transform: none; } }
+@keyframes sf-in-slide-up { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
+@keyframes sf-in-slide-down { from { opacity: 0; transform: translateY(-100%); } to { opacity: 1; transform: none; } }
+@keyframes sf-in-zoom { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: none; } }
+@keyframes sf-in-pop {
+	0% { opacity: 0; transform: scale(0); }
+	70% { opacity: 1; transform: scale(1.08); }
+	100% { opacity: 1; transform: none; }
+}
+@keyframes sf-in-bounce {
+	0% { opacity: 0; transform: translateY(-60%); }
+	50% { opacity: 1; transform: translateY(8%); }
+	70% { transform: translateY(-4%); }
+	85% { transform: translateY(2%); }
+	100% { opacity: 1; transform: none; }
+}
+@keyframes sf-in-flip { from { opacity: 0; transform: perspective(600px) rotateX(90deg); } to { opacity: 1; transform: none; } }
+@keyframes sf-in-blur { from { opacity: 0; filter: blur(14px); } to { opacity: 1; filter: none; } }
+
+@keyframes sf-out-none { from { opacity: 1; } to { opacity: 0; } }
+@keyframes sf-out-fade { from { opacity: 1; } to { opacity: 0; } }
+@keyframes sf-out-slide-left { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-110%); } }
+@keyframes sf-out-slide-right { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(110%); } }
+@keyframes sf-out-slide-up { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-100%); } }
+@keyframes sf-out-slide-down { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(100%); } }
+@keyframes sf-out-zoom { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(1.4); } }
+@keyframes sf-out-shrink { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(0); } }
+@keyframes sf-out-flip { from { opacity: 1; transform: none; } to { opacity: 0; transform: perspective(600px) rotateX(90deg); } }
+@keyframes sf-out-blur { from { opacity: 1; filter: none; } to { opacity: 0; filter: blur(14px); } }
+
+/* Highlight (name/amount) text animations used by the Event Display. */
+@keyframes sf-text-wave { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-0.25em); } }
+@keyframes sf-text-bounce { 0%, 100% { transform: none; } 30% { transform: translateY(-0.35em) scale(1.1); } 60% { transform: none; } }
+@keyframes sf-text-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@keyframes sf-text-rainbow { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
+
+.sf-letter { display: inline-block; white-space: pre; }
+.sf-textanim-wave .sf-highlight .sf-letter { animation: sf-text-wave 1.2s ease-in-out infinite; }
+.sf-textanim-bounce .sf-highlight .sf-letter { animation: sf-text-bounce 1.4s ease-in-out infinite; }
+.sf-textanim-pulse .sf-highlight { display: inline-block; animation: sf-text-pulse 1.2s ease-in-out infinite; }
+.sf-textanim-rainbow .sf-highlight { animation: sf-text-rainbow 2.5s linear infinite; }
