@@ -1,0 +1,123 @@
+/* Social Feed: Event Display base styles. Values come from CSS variables set by events.js; the
+ * user's Custom CSS is appended after this file. */
+
+html, body {
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	background: transparent;
+}
+
+body {
+	font-family: var(--sf-font);
+	-webkit-font-smoothing: antialiased;
+}
+
+#stage {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	box-sizing: border-box;
+	padding: 8px;
+}
+.sf-h-left #stage { justify-content: flex-start; }
+.sf-h-center #stage { justify-content: center; }
+.sf-h-right #stage { justify-content: flex-end; }
+.sf-v-top #stage { align-items: flex-start; }
+.sf-v-center #stage { align-items: center; }
+.sf-v-bottom #stage { align-items: flex-end; }
+
+.sf-alert {
+	max-width: var(--sf-max-width);
+	max-height: 100%;
+	box-sizing: border-box;
+}
+
+.sf-card {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: var(--sf-gap);
+	padding: var(--sf-padding);
+	background: var(--sf-card-bg);
+	border-radius: var(--sf-card-radius);
+	border: var(--sf-card-border-width) solid var(--sf-card-border-color);
+	overflow: hidden;
+	box-sizing: border-box;
+	text-align: var(--sf-text-align);
+}
+
+.sf-media-top .sf-card { flex-direction: column; }
+.sf-media-left .sf-card { flex-direction: row; }
+.sf-media-right .sf-card { flex-direction: row-reverse; }
+.sf-media-background .sf-card { flex-direction: column; }
+
+.sf-style-banner .sf-alert { width: var(--sf-max-width); }
+.sf-style-banner .sf-card { width: 100%; }
+.sf-style-minimal .sf-card { background: transparent; border: none; padding: 0; }
+
+.sf-media {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.sf-media img, .sf-media video {
+	max-width: var(--sf-media-size);
+	max-height: var(--sf-media-size);
+	object-fit: contain;
+	display: block;
+}
+.sf-media-background .sf-media {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+}
+.sf-media-background .sf-media img,
+.sf-media-background .sf-media video {
+	width: 100%;
+	height: 100%;
+	max-width: none;
+	max-height: none;
+	object-fit: cover;
+}
+.sf-media-background .sf-body { position: relative; z-index: 1; }
+
+.sf-body { min-width: 0; }
+
+.sf-title {
+	font-size: var(--sf-title-size);
+	font-weight: var(--sf-title-weight);
+	color: var(--sf-title-color);
+	line-height: 1.15;
+	text-shadow: var(--sf-text-shadow);
+	overflow-wrap: anywhere;
+}
+
+.sf-message {
+	margin-top: 0.35em;
+	font-size: var(--sf-message-size);
+	color: var(--sf-message-color);
+	line-height: 1.3;
+	text-shadow: var(--sf-text-shadow);
+	overflow-wrap: anywhere;
+}
+.sf-message:empty { display: none; }
+
+.sf-highlight { color: var(--sf-highlight-color); }
+
+.sf-platform-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.2em;
+	height: 1.2em;
+	border-radius: 0.3em;
+	font-size: 0.6em;
+	font-weight: 800;
+	color: #fff;
+	vertical-align: middle;
+	margin-right: 0.35em;
+}
