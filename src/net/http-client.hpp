@@ -20,6 +20,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #include <QJsonObject>
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -45,6 +46,27 @@ inline HttpResponse get(const std::string &url, const std::vector<std::string> &
 {
 	return request("GET", url, headers);
 }
+
+/* Long-lived streaming GET. 2xx bodies are handed to onData as they arrive (return false to stop);
+ * error bodies are collected into the response instead. The transfer ends when the server closes
+ * it, shouldAbort() returns true, or no bytes arrive for idleTimeoutSeconds (0 = no limit). */
+struct StreamOptions {
+	/* Called once, before the first onData, with the response status and Content-Type. */
+	std::function<void(long status, const std::string &contentType)> onHeaders;
+	std::function<bool(const char *data, size_t size)> onData;
+	std::function<bool()> shouldAbort;
+	long idleTimeoutSeconds = 0;
+};
+
+struct StreamResponse : HttpResponse {
+	std::string contentType;
+	bool aborted = false;     /* shouldAbort() or onData stopped it */
+	bool idleTimeout = false; /* no data for idleTimeoutSeconds */
+	size_t bytes = 0;
+	long long firstByteMs = -1; /* time to first body byte */
+};
+
+StreamResponse streamGet(const std::string &url, const std::vector<std::string> &headers, const StreamOptions &options);
 
 std::string urlEncode(const std::string &value);
 /* application/x-www-form-urlencoded body from key/value pairs. */

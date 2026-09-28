@@ -47,6 +47,9 @@ struct AppCredentials {
 	bool valid() const { return !clientId.isEmpty() && !clientSecret.isEmpty(); }
 };
 
+/* Base URL of the Data API (the "apiBaseUrl" config key overrides it for testing). */
+QString apiBase(bool streaming = false);
+
 /* From the "youtube" config section. */
 AppCredentials appCredentials();
 

@@ -102,6 +102,8 @@ private:
 	QSpinBox *youtubePoll = nullptr;
 	QSpinBox *youtubeQuota = nullptr;
 	QLabel *youtubeEstimate = nullptr;
+	QCheckBox *youtubeStreaming = nullptr;
+	QSpinBox *youtubeStreamCost = nullptr;
 	QTreeWidget *history = nullptr;
 	QComboBox *testPlatform = nullptr;
 };
