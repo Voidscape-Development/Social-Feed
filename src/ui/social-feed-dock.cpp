@@ -24,6 +24,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "providers/provider-manager.hpp"
 #include "providers/twitch/twitch-auth.hpp"
 #include "providers/youtube/youtube-api.hpp"
+#include "providers/youtube/youtube-chat-stream.hpp"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -31,6 +32,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDialogButtonBox>
+#include <QFileInfo>
 #include <QFont>
 #include <QGridLayout>
 #include <QGroupBox>
@@ -403,7 +405,13 @@ QWidget *SocialFeedDock::buildYouTubeBox()
 	youtubeEstimate->setStyleSheet("color: gray;");
 	grid->addWidget(youtubeEstimate, 4, 0, 1, 2);
 
-	QVBoxLayout *advanced = addAdvancedGroup(grid, 5);
+	youtubeStreaming = new QCheckBox(tr("Use streaming chat (experimental)"));
+	youtubeStreaming->setToolTip(
+		tr("Keep one liveChatMessages.streamList connection open instead of polling. Every connection is "
+		   "logged to youtube-stream-log.csv so its real quota cost can be measured."));
+	grid->addWidget(youtubeStreaming, 5, 0, 1, 2);
+
+	QVBoxLayout *advanced = addAdvancedGroup(grid, 6);
 	auto *help = new QLabel(
 		tr("YouTube uses your own Google Cloud project, so the API quota is yours. Create a project, enable "
 		   "the <i>YouTube Data API v3</i>, and add an OAuth client of type <i>TVs and Limited Input "
@@ -426,6 +434,21 @@ QWidget *SocialFeedDock::buildYouTubeBox()
 	advanced->addWidget(youtubeClientSecret);
 	advanced->addWidget(new QLabel(tr("Daily quota of your project:")));
 	advanced->addWidget(youtubeQuota);
+	youtubeStreamCost = new QSpinBox();
+	youtubeStreamCost->setRange(0, 100);
+	youtubeStreamCost->setSuffix(tr(" units"));
+	youtubeStreamCost->setToolTip(tr("Google does not document the cost of a streaming connection. This value is "
+					 "only used for the plugin's own budget; compare the log with the quota graph "
+					 "in Google Cloud Console to find the real number."));
+	advanced->addWidget(new QLabel(tr("Assumed cost per streaming connection:")));
+	advanced->addWidget(youtubeStreamCost);
+	auto *openLog = new QPushButton(tr("Open streaming measurement log"));
+	advanced->addWidget(openLog);
+	connect(openLog, &QPushButton::clicked, this, []() {
+		QString path = youtube::streamLogPath();
+		QFileInfo info(path);
+		QDesktopServices::openUrl(QUrl::fromLocalFile(info.exists() ? path : info.absolutePath()));
+	});
 
 	connect(youtubeLogin, &QPushButton::clicked, this, [this]() {
 		DeviceLoginDialog dialog(youtubeFlow(), this);
@@ -450,6 +473,11 @@ QWidget *SocialFeedDock::buildYouTubeBox()
 		[](int seconds) { ConfigStore::instance().updateSection("youtube", {{"pollSeconds", seconds}}); });
 	connect(youtubeQuota, &QSpinBox::valueChanged, this,
 		[](int units) { ConfigStore::instance().updateSection("youtube", {{"dailyQuota", units}}); });
+	connect(youtubeStreaming, &QCheckBox::toggled, this, [](bool on) {
+		ConfigStore::instance().updateSection("youtube", {{"chatTransport", on ? "stream" : "poll"}});
+	});
+	connect(youtubeStreamCost, &QSpinBox::valueChanged, this,
+		[](int units) { ConfigStore::instance().updateSection("youtube", {{"streamCost", units}}); });
 	return box;
 }
 
@@ -586,16 +614,28 @@ void SocialFeedDock::refreshYouTubeAccount()
 
 	int poll = section.value("pollSeconds").toInt(youtube::kDefaultPollSeconds);
 	int quota = section.value("dailyQuota").toInt(youtube::kDefaultDailyQuota);
+	bool streaming = section.value("chatTransport").toString() == "stream";
 	{
 		QSignalBlocker blockPoll(youtubePoll);
 		QSignalBlocker blockQuota(youtubeQuota);
+		QSignalBlocker blockStreaming(youtubeStreaming);
+		QSignalBlocker blockCost(youtubeStreamCost);
 		youtubePoll->setValue(poll);
 		youtubeQuota->setValue(quota);
+		youtubeStreaming->setChecked(streaming);
+		youtubeStreamCost->setValue(section.value("streamCost").toInt(5));
 	}
+	youtubePoll->setEnabled(!streaming);
 	/* Budget: one liveChatMessages call per interval, minus ~1 unit/minute for broadcast
 	 * checks while offline, which is small enough to ignore in the estimate. */
 	double hours = (double)quota / youtube::kCostChatMessages * poll / 3600.0;
-	youtubeEstimate->setText(tr("≈ %1 hours of live chat per day at this refresh rate.").arg(hours, 0, 'f', 1));
+	if (streaming)
+		youtubeEstimate->setText(tr("Streaming: the quota cost per connection is not documented by Google yet. "
+					    "Connections are logged so it can be measured; the refresh interval is not "
+					    "used while streaming."));
+	else
+		youtubeEstimate->setText(
+			tr("≈ %1 hours of live chat per day at this refresh rate.").arg(hours, 0, 'f', 1));
 
 	if (!youtubeClientId->hasFocus())
 		youtubeClientId->setText(section.value("clientId").toString());

@@ -155,6 +155,18 @@ ParseResult parseChatMessages(const QJsonArray &items, const QString &channel)
 			       {"count", count},
 			       {"amount", count},
 			       {"message", QString()}});
+		} else if (type == "giftEvent") {
+			/* YouTube "Jewels" gifts. amount = total jewels, so amount variants scale with value. */
+			QJsonObject d = snippet.value("giftDetails").toObject();
+			int combo = std::max(1, d.value("comboCount").toInt(1));
+			int jewels = d.value("jewelsAmount").toInt() * combo;
+			QString name = d.value("giftName").toString();
+			event({{"type", "gift"},
+			       {"reward", name.isEmpty() ? d.value("altText").toString() : name},
+			       {"count", combo},
+			       {"amount", jewels},
+			       {"formattedAmount", QStringLiteral("%1 jewels").arg(jewels)},
+			       {"message", QString()}});
 		} else if (type == "messageDeletedEvent") {
 			QString target =
 				snippet.value("messageDeletedDetails").toObject().value("deletedMessageId").toString();
@@ -170,7 +182,8 @@ ParseResult parseChatMessages(const QJsonArray &items, const QString &channel)
 		} else if (type == "chatEndedEvent") {
 			result.chatEnded = true;
 		}
-		/* Other types (giftMembershipReceivedEvent, sponsor-only mode, polls, …) are ignored. */
+		/* Other types (giftMembershipReceivedEvent, sponsor-only mode, polls, tombstones, …) are
+		 * ignored. Google no longer delivers messageDeletedEvent; it is kept for older data. */
 	}
 	return result;
 }

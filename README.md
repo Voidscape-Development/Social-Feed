@@ -65,6 +65,8 @@ YouTube chat, Super Chats, Super Stickers, new members, milestones, gifted membe
 
 The plugin finds your active broadcast (checking once a minute while you are offline), then reads its chat. Reading chat costs 5 quota units per request, so the **Chat refresh** interval decides how many hours of chat the daily quota covers (default 8 s ≈ 4.4 hours with the default 10,000 units/day). The dock shows the estimate and today's usage. The plugin stops before the budget runs out and resumes after midnight Pacific time. If Google grants your project more quota, raise **Daily quota** under Advanced. Messages sent before the plugin connected are not replayed.
 
+**Experimental streaming chat.** Ticking **Use streaming chat (experimental)** replaces polling with a single long-lived `liveChatMessages.streamList` connection (REST form, no extra login). Messages arrive with lower latency and, if YouTube charges per connection rather than per message, with much lower quota use. Google does not document its quota cost yet, so every connection is logged for measurement. See [docs/youtube-streaming-experiment.md](docs/youtube-streaming-experiment.md). YouTube Jewels gifts appear as **Gift** events.
+
 ## How it works
 
 ```

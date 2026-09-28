@@ -91,6 +91,8 @@ target_sources(
     src/providers/youtube/youtube-api.hpp
     src/providers/youtube/youtube-chat-parser.cpp
     src/providers/youtube/youtube-chat-parser.hpp
+    src/providers/youtube/youtube-chat-stream.cpp
+    src/providers/youtube/youtube-chat-stream.hpp
     src/providers/youtube/youtube-provider.cpp
     src/providers/youtube/youtube-provider.hpp
     src/sources/design-defaults.cpp

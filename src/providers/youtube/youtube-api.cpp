@@ -38,13 +38,6 @@ constexpr const char *kTokenUrl = "https://oauth2.googleapis.com/token";
 constexpr const char *kRevokeUrl = "https://oauth2.googleapis.com/revoke";
 constexpr const char *kQuotaSection = "youtube_quota";
 
-QString apiBase()
-{
-	/* Development override, used to point the provider at a mock server. */
-	QString base = ConfigStore::instance().section("youtube").value("apiBaseUrl").toString().trimmed();
-	return base.isEmpty() ? QStringLiteral("https://www.googleapis.com/youtube/v3") : base;
-}
-
 oauth::TokenResult parseToken(const net::HttpResponse &response)
 {
 	oauth::TokenResult result;
@@ -67,6 +60,17 @@ oauth::TokenResult parseToken(const net::HttpResponse &response)
 }
 
 } // namespace
+
+QString apiBase(bool streaming)
+{
+	/* Development override, used to point the provider at a mock server. */
+	QString base = ConfigStore::instance().section("youtube").value("apiBaseUrl").toString().trimmed();
+	if (!base.isEmpty())
+		return base;
+	/* The streaming method is published on the youtube.googleapis.com root (discovery rootUrl). */
+	return streaming ? QStringLiteral("https://youtube.googleapis.com/youtube/v3")
+			 : QStringLiteral("https://www.googleapis.com/youtube/v3");
+}
 
 AppCredentials appCredentials()
 {
