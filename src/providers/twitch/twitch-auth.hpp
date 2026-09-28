@@ -18,6 +18,8 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #pragma once
 
+#include "providers/oauth-device.hpp"
+
 #include <QString>
 #include <QStringList>
 
@@ -32,26 +34,8 @@ extern const char *const kScopes;
  * SOCIAL_FEED_TWITCH_CLIENT_ID. Empty when neither is set. */
 QString clientId();
 
-struct DeviceCode {
-	bool ok = false;
-	QString error;
-	QString deviceCode;
-	QString userCode;
-	QString verificationUri;
-	int intervalSeconds = 5;
-	int expiresInSeconds = 1800;
-};
-
-struct TokenResult {
-	enum class Status { Success, Pending, SlowDown, Denied, Expired, Error };
-
-	Status status = Status::Error;
-	QString error;
-	QString accessToken;
-	QString refreshToken;
-	qint64 expiresInSeconds = 0;
-	QStringList scopes;
-};
+using DeviceCode = oauth::DeviceCode;
+using TokenResult = oauth::TokenResult;
 
 struct ValidateResult {
 	bool ok = false;

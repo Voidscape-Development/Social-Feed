@@ -149,3 +149,14 @@ body {
 	-webkit-text-stroke: 0;
 }
 .sf-stacked .sf-suffix { display: none; }
+
+.sf-paid-label {
+	font-size: 0.7em;
+	font-weight: 800;
+	padding: 0.05em 0.45em;
+	border-radius: 0.4em;
+	background: var(--sf-highlight-color, #ffb300);
+	color: #111;
+	text-shadow: none;
+	-webkit-text-stroke: 0;
+}

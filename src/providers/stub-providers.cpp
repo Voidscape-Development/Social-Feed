@@ -45,7 +45,6 @@ private:
 std::vector<std::unique_ptr<Provider>> makeStubProviders()
 {
 	std::vector<std::unique_ptr<Provider>> stubs;
-	stubs.push_back(std::make_unique<StubProvider>("youtube", true));
 	stubs.push_back(std::make_unique<StubProvider>("kick", true));
 	stubs.push_back(std::make_unique<StubProvider>("tiktok", true));
 	stubs.push_back(std::make_unique<StubProvider>("streamelements", false));

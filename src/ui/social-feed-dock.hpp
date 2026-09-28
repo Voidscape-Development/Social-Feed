@@ -18,11 +18,14 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #pragma once
 
+#include "providers/oauth-device.hpp"
+
 #include <QDialog>
 #include <QHash>
 #include <QWidget>
 
 #include <atomic>
+#include <functional>
 #include <memory>
 
 class QCheckBox;
@@ -30,24 +33,35 @@ class QComboBox;
 class QLabel;
 class QLineEdit;
 class QPushButton;
+class QSpinBox;
 class QTreeWidget;
 
 namespace sf::ui {
 
-/* Twitch device-code login: shows the code, opens twitch.tv/activate and polls for the token
- * on a worker thread. */
-class TwitchLoginDialog : public QDialog {
+/* One OAuth device-code login. requestCode/poll/finish run on a worker thread; finish stores
+ * the login and returns an error message, or an empty string on success. */
+struct DeviceFlow {
+	QString platform;          /* shown in texts, e.g. "Twitch" */
+	QString missingSetupError; /* non-empty: show this instead of starting */
+	std::function<oauth::DeviceCode()> requestCode;
+	std::function<oauth::TokenResult(const QString &deviceCode)> poll;
+	std::function<QString(const oauth::TokenResult &token)> finish;
+};
+
+/* Shows the user code, opens the verification page and polls for the token. */
+class DeviceLoginDialog : public QDialog {
 	Q_OBJECT
 
 public:
-	explicit TwitchLoginDialog(QWidget *parent = nullptr);
-	~TwitchLoginDialog() override;
+	DeviceLoginDialog(DeviceFlow flow, QWidget *parent = nullptr);
+	~DeviceLoginDialog() override;
 
 private:
 	void start();
 	void showCode(const QString &userCode, const QString &uri);
 	void fail(const QString &message);
 
+	DeviceFlow flow;
 	QLabel *codeLabel;
 	QLabel *statusLabel;
 	QPushButton *openButton;
@@ -65,10 +79,13 @@ public:
 
 private:
 	QWidget *buildAccountsTab();
+	QWidget *buildTwitchBox();
+	QWidget *buildYouTubeBox();
 	QWidget *buildHistoryTab();
 	QWidget *buildTestTab();
 	void refreshStatus(const QString &providerId);
 	void refreshTwitchAccount();
+	void refreshYouTubeAccount();
 	void refreshHistory();
 
 	QHash<QString, QLabel *> statusLabels;
@@ -77,6 +94,14 @@ private:
 	QPushButton *twitchLogout = nullptr;
 	QCheckBox *twitchEvents = nullptr;
 	QLineEdit *twitchClientId = nullptr;
+	QLabel *youtubeAccount = nullptr;
+	QPushButton *youtubeLogin = nullptr;
+	QPushButton *youtubeLogout = nullptr;
+	QLineEdit *youtubeClientId = nullptr;
+	QLineEdit *youtubeClientSecret = nullptr;
+	QSpinBox *youtubePoll = nullptr;
+	QSpinBox *youtubeQuota = nullptr;
+	QLabel *youtubeEstimate = nullptr;
 	QTreeWidget *history = nullptr;
 	QComboBox *testPlatform = nullptr;
 };

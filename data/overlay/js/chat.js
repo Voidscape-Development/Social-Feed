@@ -127,7 +127,7 @@
 		const active = {
 			mention: mentioned,
 			firstTime: !!msg.firstMessage,
-			cheer: (msg.bits || 0) > 0 || !!msg.highlighted,
+			cheer: (msg.bits || 0) > 0 || !!msg.highlighted || !!msg.paid,
 			broadcaster: roles.includes('broadcaster'),
 			moderator: roles.includes('moderator'),
 			vip: roles.includes('vip'),
@@ -325,6 +325,14 @@
 			suffix.textContent = layout.nameSuffix;
 			suffix.style.marginLeft = '0';
 			meta.appendChild(suffix);
+		}
+
+		if (msg.paid) {
+			/* YouTube Super Chat / Super Sticker amount */
+			const paid = document.createElement('span');
+			paid.className = 'sf-paid-label';
+			paid.textContent = msg.paid;
+			meta.appendChild(paid);
 		}
 
 		const text = buildText(msg, emotes);

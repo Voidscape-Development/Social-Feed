@@ -53,7 +53,8 @@ The plugin calls obs-browser's `javascript_event` proc handler on the private br
   "isAction": false,
   "firstMessage": false,
   "highlighted": false,
-  "bits": 100,                                  // optional
+  "bits": 100,                                  // optional (Twitch)
+  "paid": "$5.00",                              // optional (YouTube Super Chat / Sticker)
   "reply": { "id": "…", "user": "Name", "text": "…" },   // optional
   "timestamp": 1700000000000,
   "test": true                                  // optional: sample item

@@ -23,6 +23,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "core/sample-data.hpp"
 #include "providers/provider-manager.hpp"
 #include "providers/twitch/twitch-auth.hpp"
+#include "providers/youtube/youtube-api.hpp"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -33,6 +34,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <QFont>
 #include <QGridLayout>
 #include <QGroupBox>
+#include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
@@ -40,6 +42,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <QPointer>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QSpinBox>
 #include <QTabWidget>
 #include <QThread>
 #include <QTreeWidget>
@@ -51,17 +54,18 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 namespace sf::ui {
 
-/* ---- TwitchLoginDialog ---- */
+/* ---- DeviceLoginDialog ---- */
 
-TwitchLoginDialog::TwitchLoginDialog(QWidget *parent)
+DeviceLoginDialog::DeviceLoginDialog(DeviceFlow deviceFlow, QWidget *parent)
 	: QDialog(parent),
+	  flow(std::move(deviceFlow)),
 	  cancelled(std::make_shared<std::atomic<bool>>(false))
 {
-	setWindowTitle(tr("Log in with Twitch"));
+	setWindowTitle(tr("Log in with %1").arg(flow.platform));
 	setMinimumWidth(420);
 
 	auto *layout = new QVBoxLayout(this);
-	auto *intro = new QLabel(tr("Open the Twitch activation page and enter this code:"));
+	auto *intro = new QLabel(tr("Open the %1 activation page and enter this code:").arg(flow.platform));
 	intro->setWordWrap(true);
 	layout->addWidget(intro);
 
@@ -75,14 +79,15 @@ TwitchLoginDialog::TwitchLoginDialog(QWidget *parent)
 	codeLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	layout->addWidget(codeLabel);
 
-	openButton = new QPushButton(tr("Open twitch.tv/activate"));
+	openButton = new QPushButton(tr("Open the activation page"));
 	openButton->setEnabled(false);
 	layout->addWidget(openButton);
 	connect(openButton, &QPushButton::clicked, this,
 		[this]() { QDesktopServices::openUrl(QUrl(verificationUri)); });
 
-	statusLabel = new QLabel(tr("Requesting a code from Twitch…"));
+	statusLabel = new QLabel(tr("Requesting a code from %1…").arg(flow.platform));
 	statusLabel->setWordWrap(true);
+	statusLabel->setOpenExternalLinks(true);
 	layout->addWidget(statusLabel);
 
 	auto *buttons = new QDialogButtonBox(QDialogButtonBox::Cancel);
@@ -92,39 +97,38 @@ TwitchLoginDialog::TwitchLoginDialog(QWidget *parent)
 	start();
 }
 
-TwitchLoginDialog::~TwitchLoginDialog()
+DeviceLoginDialog::~DeviceLoginDialog()
 {
 	*cancelled = true;
 }
 
-void TwitchLoginDialog::showCode(const QString &userCode, const QString &uri)
+void DeviceLoginDialog::showCode(const QString &userCode, const QString &uri)
 {
 	codeLabel->setText(userCode);
 	verificationUri = uri;
+	openButton->setText(tr("Open %1").arg(QUrl(uri).host() + QUrl(uri).path()));
 	openButton->setEnabled(true);
-	statusLabel->setText(tr("Waiting for you to approve the login on Twitch…"));
+	statusLabel->setText(tr("Waiting for you to approve the login on %1…").arg(flow.platform));
 	QDesktopServices::openUrl(QUrl(uri));
 }
 
-void TwitchLoginDialog::fail(const QString &message)
+void DeviceLoginDialog::fail(const QString &message)
 {
 	statusLabel->setText(message);
 	openButton->setEnabled(false);
 }
 
-void TwitchLoginDialog::start()
+void DeviceLoginDialog::start()
 {
-	QString clientId = twitch::clientId();
-	if (clientId.isEmpty()) {
-		fail(tr("No Twitch Client ID is configured. Register an application at dev.twitch.tv (category "
-			"\"Broadcaster Suite\", client type \"Public\") and enter its Client ID in the Social Feed "
-			"dock's advanced settings."));
+	if (!flow.missingSetupError.isEmpty()) {
+		fail(flow.missingSetupError);
 		return;
 	}
 
-	QPointer<TwitchLoginDialog> self(this);
+	QPointer<DeviceLoginDialog> self(this);
 	auto cancel = cancelled;
-	std::thread([self, cancel, clientId]() {
+	DeviceFlow f = flow;
+	std::thread([self, cancel, f]() {
 		auto post = [&](auto fn) {
 			QMetaObject::invokeMethod(
 				qApp,
@@ -135,14 +139,14 @@ void TwitchLoginDialog::start()
 				Qt::QueuedConnection);
 		};
 
-		twitch::DeviceCode code = twitch::requestDeviceCode(clientId);
+		oauth::DeviceCode code = f.requestCode();
 		if (!code.ok) {
-			post([code](TwitchLoginDialog *d) {
-				d->fail(tr("Twitch refused the login request: %1").arg(code.error));
+			post([code, f](DeviceLoginDialog *d) {
+				d->fail(tr("%1 refused the login request: %2").arg(f.platform, code.error));
 			});
 			return;
 		}
-		post([code](TwitchLoginDialog *d) { d->showCode(code.userCode, code.verificationUri); });
+		post([code](DeviceLoginDialog *d) { d->showCode(code.userCode, code.verificationUri); });
 
 		int interval = code.intervalSeconds;
 		auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(code.expiresInSeconds);
@@ -152,39 +156,96 @@ void TwitchLoginDialog::start()
 			if (*cancel)
 				return;
 
-			twitch::TokenResult token = twitch::pollDeviceToken(clientId, code.deviceCode);
+			oauth::TokenResult token = f.poll(code.deviceCode);
 			switch (token.status) {
-			case twitch::TokenResult::Status::Pending:
+			case oauth::TokenResult::Status::Pending:
 				continue;
-			case twitch::TokenResult::Status::SlowDown:
+			case oauth::TokenResult::Status::SlowDown:
 				interval += 5;
 				continue;
-			case twitch::TokenResult::Status::Success: {
-				twitch::ValidateResult identity = twitch::validateToken(token.accessToken);
+			case oauth::TokenResult::Status::Success: {
 				if (*cancel)
 					return;
-				twitch::storeLogin(token, identity);
-				post([](TwitchLoginDialog *d) { d->accept(); });
+				QString error = f.finish(token);
+				if (error.isEmpty())
+					post([](DeviceLoginDialog *d) { d->accept(); });
+				else
+					post([error](DeviceLoginDialog *d) {
+						d->fail(tr("Login failed: %1").arg(error));
+					});
 				return;
 			}
-			case twitch::TokenResult::Status::Denied:
-				post([](TwitchLoginDialog *d) { d->fail(tr("The login was declined on Twitch.")); });
+			case oauth::TokenResult::Status::Denied:
+				post([f](DeviceLoginDialog *d) {
+					d->fail(tr("The login was declined on %1.").arg(f.platform));
+				});
 				return;
-			case twitch::TokenResult::Status::Expired:
-				post([](TwitchLoginDialog *d) {
+			case oauth::TokenResult::Status::Expired:
+				post([](DeviceLoginDialog *d) {
 					d->fail(tr("The code expired. Close this window and try again."));
 				});
 				return;
-			case twitch::TokenResult::Status::Error:
-				post([token](TwitchLoginDialog *d) {
+			case oauth::TokenResult::Status::Error:
+				post([token](DeviceLoginDialog *d) {
 					d->fail(tr("Login failed: %1").arg(token.error));
 				});
 				return;
 			}
 		}
-		post([](TwitchLoginDialog *d) { d->fail(tr("The code expired. Close this window and try again.")); });
+		post([](DeviceLoginDialog *d) { d->fail(tr("The code expired. Close this window and try again.")); });
 	}).detach();
 }
+
+namespace {
+
+DeviceFlow twitchFlow()
+{
+	DeviceFlow flow;
+	flow.platform = QStringLiteral("Twitch");
+	QString clientId = twitch::clientId();
+	if (clientId.isEmpty())
+		flow.missingSetupError = QObject::tr(
+			"No Twitch Client ID is configured. Register an application at dev.twitch.tv (client type "
+			"\"Public\") and enter its Client ID under Twitch → Advanced.");
+	flow.requestCode = [clientId]() {
+		return twitch::requestDeviceCode(clientId);
+	};
+	flow.poll = [clientId](const QString &deviceCode) {
+		return twitch::pollDeviceToken(clientId, deviceCode);
+	};
+	flow.finish = [](const oauth::TokenResult &token) {
+		twitch::storeLogin(token, twitch::validateToken(token.accessToken));
+		return QString();
+	};
+	return flow;
+}
+
+DeviceFlow youtubeFlow()
+{
+	DeviceFlow flow;
+	flow.platform = QStringLiteral("Google");
+	youtube::AppCredentials app = youtube::appCredentials();
+	if (!app.valid())
+		flow.missingSetupError =
+			QObject::tr("Enter the Client ID and Client secret of your Google OAuth client under YouTube → "
+				    "Advanced first. See the Social Feed README for how to create one.");
+	flow.requestCode = [app]() {
+		return youtube::requestDeviceCode(app);
+	};
+	flow.poll = [app](const QString &deviceCode) {
+		return youtube::pollDeviceToken(app, deviceCode);
+	};
+	flow.finish = [](const oauth::TokenResult &token) {
+		youtube::ChannelInfo channel = youtube::fetchOwnChannel(token.accessToken);
+		if (!channel.ok)
+			return channel.error;
+		youtube::storeLogin(token, channel);
+		return QString();
+	};
+	return flow;
+}
+
+} // namespace
 
 /* ---- SocialFeedDock ---- */
 
@@ -206,8 +267,11 @@ SocialFeedDock::SocialFeedDock(QWidget *parent) : QWidget(parent)
 	connect(&ConfigStore::instance(), &ConfigStore::sectionChanged, this, [this](const QString &section) {
 		if (section == "twitch")
 			refreshTwitchAccount();
+		else if (section == "youtube")
+			refreshYouTubeAccount();
 	});
 	refreshTwitchAccount();
+	refreshYouTubeAccount();
 
 	connect(&EventBus::instance(), &EventBus::historyChanged, this, &SocialFeedDock::refreshHistory,
 		Qt::QueuedConnection);
@@ -222,10 +286,54 @@ QWidget *SocialFeedDock::buildAccountsTab()
 	auto *content = new QWidget();
 	auto *layout = new QVBoxLayout(content);
 
-	/* Twitch */
-	auto *twitchBox = new QGroupBox(tr("Twitch"));
-	auto *grid = new QGridLayout(twitchBox);
+	layout->addWidget(buildTwitchBox());
+	layout->addWidget(buildYouTubeBox());
+
+	/* Everything else, not implemented yet */
+	for (const auto &provider : ProviderManager::instance().providers()) {
+		if (provider->id() == "twitch" || provider->id() == "youtube")
+			continue;
+		auto *box = new QGroupBox(provider->displayName());
+		auto *boxLayout = new QVBoxLayout(box);
+		auto *label = new QLabel();
+		label->setWordWrap(true);
+		statusLabels[provider->id()] = label;
+		boxLayout->addWidget(label);
+		layout->addWidget(box);
+	}
+
+	layout->addStretch();
+	scroll->setWidget(content);
+	return scroll;
+}
+
+namespace {
+
+/* Collapsible "Advanced" group; returns the layout to fill. */
+QVBoxLayout *addAdvancedGroup(QGridLayout *grid, int row)
+{
+	auto *advanced = new QGroupBox(QObject::tr("Advanced"));
+	advanced->setCheckable(true);
+	advanced->setChecked(false);
+	auto *advLayout = new QVBoxLayout(advanced);
+	auto *advWidget = new QWidget();
+	auto *inner = new QVBoxLayout(advWidget);
+	inner->setContentsMargins(0, 0, 0, 0);
+	advLayout->addWidget(advWidget);
+	advWidget->setVisible(false);
+	QObject::connect(advanced, &QGroupBox::toggled, advWidget, &QWidget::setVisible);
+	grid->addWidget(advanced, row, 0, 1, 2);
+	return inner;
+}
+
+} // namespace
+
+QWidget *SocialFeedDock::buildTwitchBox()
+{
+	auto *box = new QGroupBox(tr("Twitch"));
+	auto *grid = new QGridLayout(box);
 	twitchAccount = new QLabel();
+	twitchAccount->setWordWrap(true);
 	statusLabels["twitch"] = new QLabel();
 	statusLabels["twitch"]->setWordWrap(true);
 	twitchLogin = new QPushButton(tr("Log in…"));
@@ -237,27 +345,16 @@ QWidget *SocialFeedDock::buildAccountsTab()
 	grid->addWidget(twitchLogout, 2, 1);
 	grid->addWidget(twitchEvents, 3, 0, 1, 2);
 
-	auto *advanced = new QGroupBox(tr("Advanced"));
-	advanced->setCheckable(true);
-	advanced->setChecked(false);
-	auto *advLayout = new QVBoxLayout(advanced);
-	auto *advWidget = new QWidget();
-	auto *advInner = new QVBoxLayout(advWidget);
-	advInner->setContentsMargins(0, 0, 0, 0);
+	QVBoxLayout *advanced = addAdvancedGroup(grid, 4);
 	twitchClientId = new QLineEdit();
 	twitchClientId->setPlaceholderText(QString::fromUtf8(SOCIAL_FEED_TWITCH_CLIENT_ID).isEmpty()
 						   ? tr("Twitch application Client ID")
 						   : tr("Built-in Client ID"));
-	advInner->addWidget(new QLabel(tr("Client ID override:")));
-	advInner->addWidget(twitchClientId);
-	advLayout->addWidget(advWidget);
-	advWidget->setVisible(false);
-	connect(advanced, &QGroupBox::toggled, advWidget, &QWidget::setVisible);
-	grid->addWidget(advanced, 4, 0, 1, 2);
-	layout->addWidget(twitchBox);
+	advanced->addWidget(new QLabel(tr("Client ID override:")));
+	advanced->addWidget(twitchClientId);
 
 	connect(twitchLogin, &QPushButton::clicked, this, [this]() {
-		TwitchLoginDialog dialog(this);
+		DeviceLoginDialog dialog(twitchFlow(), this);
 		dialog.exec();
 	});
 	connect(twitchLogout, &QPushButton::clicked, this, [this]() {
@@ -274,23 +371,86 @@ QWidget *SocialFeedDock::buildAccountsTab()
 	connect(twitchClientId, &QLineEdit::editingFinished, this, [this]() {
 		ConfigStore::instance().updateSection("twitch", {{"clientId", twitchClientId->text().trimmed()}});
 	});
+	return box;
+}
 
-	/* Everything else, not implemented yet */
-	for (const auto &provider : ProviderManager::instance().providers()) {
-		if (provider->id() == "twitch")
-			continue;
-		auto *box = new QGroupBox(provider->displayName());
-		auto *boxLayout = new QVBoxLayout(box);
-		auto *label = new QLabel();
-		label->setWordWrap(true);
-		statusLabels[provider->id()] = label;
-		boxLayout->addWidget(label);
-		layout->addWidget(box);
-	}
+QWidget *SocialFeedDock::buildYouTubeBox()
+{
+	auto *box = new QGroupBox(tr("YouTube"));
+	auto *grid = new QGridLayout(box);
+	youtubeAccount = new QLabel();
+	youtubeAccount->setWordWrap(true);
+	statusLabels["youtube"] = new QLabel();
+	statusLabels["youtube"]->setWordWrap(true);
+	youtubeLogin = new QPushButton(tr("Log in…"));
+	youtubeLogout = new QPushButton(tr("Log out"));
+	grid->addWidget(youtubeAccount, 0, 0, 1, 2);
+	grid->addWidget(statusLabels["youtube"], 1, 0, 1, 2);
+	grid->addWidget(youtubeLogin, 2, 0);
+	grid->addWidget(youtubeLogout, 2, 1);
 
-	layout->addStretch();
-	scroll->setWidget(content);
-	return scroll;
+	auto *intervalRow = new QHBoxLayout();
+	youtubePoll = new QSpinBox();
+	youtubePoll->setRange(3, 120);
+	youtubePoll->setSuffix(tr(" s"));
+	youtubePoll->setToolTip(tr("How often live chat is fetched. Faster costs more of the daily quota."));
+	intervalRow->addWidget(new QLabel(tr("Chat refresh every")));
+	intervalRow->addWidget(youtubePoll);
+	intervalRow->addStretch();
+	grid->addLayout(intervalRow, 3, 0, 1, 2);
+	youtubeEstimate = new QLabel();
+	youtubeEstimate->setWordWrap(true);
+	youtubeEstimate->setStyleSheet("color: gray;");
+	grid->addWidget(youtubeEstimate, 4, 0, 1, 2);
+
+	QVBoxLayout *advanced = addAdvancedGroup(grid, 5);
+	auto *help = new QLabel(
+		tr("YouTube uses your own Google Cloud project, so the API quota is yours. Create a project, enable "
+		   "the <i>YouTube Data API v3</i>, and add an OAuth client of type <i>TVs and Limited Input "
+		   "devices</i>. <a href=\"https://console.cloud.google.com/apis/credentials\">Open Google Cloud "
+		   "credentials</a>"));
+	help->setWordWrap(true);
+	help->setOpenExternalLinks(true);
+	advanced->addWidget(help);
+	youtubeClientId = new QLineEdit();
+	youtubeClientId->setPlaceholderText(tr("…apps.googleusercontent.com"));
+	youtubeClientSecret = new QLineEdit();
+	youtubeClientSecret->setEchoMode(QLineEdit::Password);
+	youtubeQuota = new QSpinBox();
+	youtubeQuota->setRange(100, 10000000);
+	youtubeQuota->setSingleStep(1000);
+	youtubeQuota->setSuffix(tr(" units/day"));
+	advanced->addWidget(new QLabel(tr("Client ID:")));
+	advanced->addWidget(youtubeClientId);
+	advanced->addWidget(new QLabel(tr("Client secret:")));
+	advanced->addWidget(youtubeClientSecret);
+	advanced->addWidget(new QLabel(tr("Daily quota of your project:")));
+	advanced->addWidget(youtubeQuota);
+
+	connect(youtubeLogin, &QPushButton::clicked, this, [this]() {
+		DeviceLoginDialog dialog(youtubeFlow(), this);
+		dialog.exec();
+	});
+	connect(youtubeLogout, &QPushButton::clicked, this, [this]() {
+		if (QMessageBox::question(this, tr("Log out"), tr("Log out of YouTube?")) != QMessageBox::Yes)
+			return;
+		QString token = ConfigStore::instance().section("youtube").value("refreshToken").toString();
+		if (!token.isEmpty())
+			std::thread([token]() { youtube::revokeToken(token); }).detach();
+		youtube::clearLogin();
+	});
+	connect(youtubeClientId, &QLineEdit::editingFinished, this, [this]() {
+		ConfigStore::instance().updateSection("youtube", {{"clientId", youtubeClientId->text().trimmed()}});
+	});
+	connect(youtubeClientSecret, &QLineEdit::editingFinished, this, [this]() {
+		ConfigStore::instance().updateSection("youtube",
+						      {{"clientSecret", youtubeClientSecret->text().trimmed()}});
+	});
+	connect(youtubePoll, &QSpinBox::valueChanged, this,
+		[](int seconds) { ConfigStore::instance().updateSection("youtube", {{"pollSeconds", seconds}}); });
+	connect(youtubeQuota, &QSpinBox::valueChanged, this,
+		[](int units) { ConfigStore::instance().updateSection("youtube", {{"dailyQuota", units}}); });
+	return box;
 }
 
 QWidget *SocialFeedDock::buildHistoryTab()
@@ -411,6 +571,36 @@ void SocialFeedDock::refreshTwitchAccount()
 	}
 	if (!twitchClientId->hasFocus())
 		twitchClientId->setText(section.value("clientId").toString());
+}
+
+void SocialFeedDock::refreshYouTubeAccount()
+{
+	QJsonObject section = ConfigStore::instance().section("youtube");
+	bool loggedIn = !section.value("refreshToken").toString().isEmpty();
+	QString name = section.value("displayName").toString();
+
+	youtubeAccount->setText(loggedIn ? tr("Logged in as <b>%1</b>").arg(name.toHtmlEscaped())
+					 : tr("Not logged in. Chat and Super Chats appear once you are live."));
+	youtubeLogin->setVisible(!loggedIn);
+	youtubeLogout->setVisible(loggedIn);
+
+	int poll = section.value("pollSeconds").toInt(youtube::kDefaultPollSeconds);
+	int quota = section.value("dailyQuota").toInt(youtube::kDefaultDailyQuota);
+	{
+		QSignalBlocker blockPoll(youtubePoll);
+		QSignalBlocker blockQuota(youtubeQuota);
+		youtubePoll->setValue(poll);
+		youtubeQuota->setValue(quota);
+	}
+	/* Budget: one liveChatMessages call per interval, minus ~1 unit/minute for broadcast
+	 * checks while offline, which is small enough to ignore in the estimate. */
+	double hours = (double)quota / youtube::kCostChatMessages * poll / 3600.0;
+	youtubeEstimate->setText(tr("≈ %1 hours of live chat per day at this refresh rate.").arg(hours, 0, 'f', 1));
+
+	if (!youtubeClientId->hasFocus())
+		youtubeClientId->setText(section.value("clientId").toString());
+	if (!youtubeClientSecret->hasFocus())
+		youtubeClientSecret->setText(section.value("clientSecret").toString());
 }
 
 void SocialFeedDock::refreshHistory()

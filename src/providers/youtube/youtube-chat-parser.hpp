@@ -18,16 +18,22 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #pragma once
 
-#include "providers/provider.hpp"
+#include "core/feed-types.hpp"
 
-#include <memory>
+#include <QJsonArray>
+
 #include <vector>
 
-namespace sf {
+namespace sf::youtube {
 
-/* Placeholders for platforms that are planned but not implemented yet (Kick, TikTok,
- * StreamElements, Streamlabs, Streamer.bot). They register so the UI, channel lists and event
- * type settings already cover them; they report "Coming soon". */
-std::vector<std::unique_ptr<Provider>> makeStubProviders();
+struct ParseResult {
+	std::vector<FeedItem> items;
+	bool chatEnded = false;
+};
 
-} // namespace sf
+/* Turns liveChatMessages.list items into feed items: chat messages, events (Super Chat,
+ * Super Sticker, new members, milestones, gifted memberships) and moderation (deleted
+ * messages, bans). `channel` is the owning channel's handle, used as the item channel. */
+ParseResult parseChatMessages(const QJsonArray &items, const QString &channel);
+
+} // namespace sf::youtube

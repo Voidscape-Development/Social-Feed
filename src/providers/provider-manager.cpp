@@ -21,6 +21,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "core/config-store.hpp"
 #include "providers/stub-providers.hpp"
 #include "providers/twitch/twitch-provider.hpp"
+#include "providers/youtube/youtube-provider.hpp"
 
 #include <QMetaObject>
 
@@ -52,6 +53,7 @@ ProviderManager &ProviderManager::instance()
 ProviderManager::ProviderManager()
 {
 	list.push_back(std::make_unique<twitch::TwitchProvider>());
+	list.push_back(std::make_unique<youtube::YouTubeProvider>());
 	for (auto &stub : makeStubProviders())
 		list.push_back(std::move(stub));
 

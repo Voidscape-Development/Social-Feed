@@ -248,6 +248,7 @@ QJsonArray defaultChannels(OverlayKind kind)
 	/* An empty channel means "the logged-in account's own channel". */
 	QJsonArray channels;
 	channels.append(QJsonObject{{"platform", "twitch"}, {"channel", ""}});
+	channels.append(QJsonObject{{"platform", "youtube"}, {"channel", ""}});
 	if (kind == OverlayKind::Events) {
 		for (const char *service : {"streamelements", "streamlabs", "streamerbot"})
 			channels.append(QJsonObject{{"platform", service}, {"channel", ""}});

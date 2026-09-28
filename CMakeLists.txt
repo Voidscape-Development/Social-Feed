@@ -71,6 +71,7 @@ target_sources(
     src/net/local-server.hpp
     src/net/websocket-client.cpp
     src/net/websocket-client.hpp
+    src/providers/oauth-device.hpp
     src/providers/provider.hpp
     src/providers/provider-manager.cpp
     src/providers/provider-manager.hpp
@@ -86,6 +87,12 @@ target_sources(
     src/providers/twitch/twitch-eventsub.hpp
     src/providers/twitch/twitch-provider.cpp
     src/providers/twitch/twitch-provider.hpp
+    src/providers/youtube/youtube-api.cpp
+    src/providers/youtube/youtube-api.hpp
+    src/providers/youtube/youtube-chat-parser.cpp
+    src/providers/youtube/youtube-chat-parser.hpp
+    src/providers/youtube/youtube-provider.cpp
+    src/providers/youtube/youtube-provider.hpp
     src/sources/design-defaults.cpp
     src/sources/design-defaults.hpp
     src/sources/overlay-source.cpp

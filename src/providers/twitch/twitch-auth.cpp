@@ -82,16 +82,7 @@ static TokenResult parseToken(const net::HttpResponse &response)
 	}
 
 	QString message = json.value("message").toString();
-	if (message == "authorization_pending")
-		result.status = TokenResult::Status::Pending;
-	else if (message == "slow_down")
-		result.status = TokenResult::Status::SlowDown;
-	else if (message == "access_denied")
-		result.status = TokenResult::Status::Denied;
-	else if (message == "expired_token" || message == "invalid device code")
-		result.status = TokenResult::Status::Expired;
-	else
-		result.status = TokenResult::Status::Error;
+	result.status = oauth::statusForError(message);
 	result.error = message.isEmpty() ? QString::fromStdString(response.describe()) : message;
 	return result;
 }
