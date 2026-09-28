@@ -238,7 +238,7 @@ QString StreamConnection::csvLine() const
 		return "\"" + value + "\"";
 	};
 	return QStringLiteral("%1,%2,%3,%4,%5,%6,%7,%8,%9,%10,%11,%12")
-		.arg(QDateTime::fromMSecsSinceEpoch(startedMs, Qt::UTC).toString(Qt::ISODate))
+		.arg(QDateTime::fromMSecsSinceEpoch(startedMs).toUTC().toString(Qt::ISODate))
 		.arg(durationMs / 1000.0, 0, 'f', 1)
 		.arg(httpStatus)
 		.arg(quote(contentType))
